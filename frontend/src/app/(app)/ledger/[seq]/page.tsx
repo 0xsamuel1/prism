@@ -3,10 +3,29 @@ import { getLatestLedger, getLedger, isNotFound } from "@/lib/horizon";
 import { formatDate, formatNumber } from "@/lib/format";
 import { notFound } from "next/navigation";
 import DetailRow from "@/components/DetailRow";
+import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
 
 interface Props { params: { seq: string } }
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const title = `Ledger #${params.seq}`;
+  try {
+    const ledger = await getLedger(parseInt(params.seq, 10));
+    const description = `Stellar ledger #${ledger.sequence} with ${formatNumber(ledger.operationCount)} operations and ${formatNumber(ledger.transactionCount)} transactions.`;
+    return {
+      title,
+      description,
+      openGraph: { title, description },
+    };
+  } catch {
+    return {
+      title,
+      description: `Stellar ledger #${params.seq}.`,
+    };
+  }
+}
 
 export default async function LedgerPage({ params }: Props) {
   if (!/^\d+$/.test(params.seq)) notFound();
@@ -50,13 +69,16 @@ export default async function LedgerPage({ params }: Props) {
       </nav>
 
       <div className="rounded-xl border border-prism-border bg-prism-surface p-6 space-y-4">
-        <DetailRow label="Hash"           value={ledger.hash} mono />
-        <DetailRow label="Closed At"      value={formatDate(ledger.closedAt)} />
-        <DetailRow label="Transactions"   value={formatNumber(ledger.transactionCount)} />
-        <DetailRow label="Successful Txs" value={formatNumber(ledger.successfulTransactionCount)} />
-        <DetailRow label="Failed Txs"     value={formatNumber(ledger.failedTransactionCount)} />
-        <DetailRow label="Operations"     value={formatNumber(ledger.operationCount)} />
-        <DetailRow label="Base Fee"       value={`${ledger.baseFee} stroops`} />
+        <DetailRow label="Hash"                value={ledger.hash} mono />
+        <DetailRow label="Closed At"           value={formatDate(ledger.closedAt)} />
+        <DetailRow label="Protocol Version"    value={String(ledger.protocolVersion)} />
+        <DetailRow label="Max Tx Set Size"     value={formatNumber(ledger.maxTxSetSize)} />
+        <DetailRow label="Tx Set Operation Ct" value={formatNumber(ledger.txSetOperationCount)} />
+        <DetailRow label="Transactions"        value={formatNumber(ledger.transactionCount)} />
+        <DetailRow label="Successful Txs"      value={formatNumber(ledger.successfulTransactionCount)} />
+        <DetailRow label="Failed Txs"          value={formatNumber(ledger.failedTransactionCount)} />
+        <DetailRow label="Operations"          value={formatNumber(ledger.operationCount)} />
+        <DetailRow label="Base Fee"            value={`${ledger.baseFee} stroops`} />
       </div>
     </div>
   );

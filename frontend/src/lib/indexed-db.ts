@@ -127,6 +127,23 @@ export async function getIndexedContract(contractId: string): Promise<IndexedCon
   };
 }
 
+export interface IndexedContractByCreator {
+  contractId: string;
+  deploymentLedger: number;
+}
+
+export async function getIndexedContractsByCreator(creator: string): Promise<IndexedContractByCreator[]> {
+  if (!isIndexerConfigured()) return [];
+  const { rows } = await getPool().query(
+    `SELECT "contractId", "deploymentLedger" FROM "Contract" WHERE creator = $1 ORDER BY "deploymentLedger" DESC`,
+    [creator]
+  );
+  return rows.map((r) => ({
+    contractId: r.contractId,
+    deploymentLedger: r.deploymentLedger,
+  }));
+}
+
 export interface IndexedEvent {
   eventId: string;
   type: string;

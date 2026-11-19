@@ -6,6 +6,7 @@ import type { ContractFunctionSpec, ContractTypeDef } from "@/types";
 import { describeContractError } from "@/lib/contract-error";
 import type { SimulationResult } from "@/lib/soroban";
 import { formatNumber } from "@/lib/format";
+import CopyButton from "@/components/CopyButton";
 
 interface Props {
   contractId: string;
@@ -66,10 +67,6 @@ export default function InvokeTool({ contractId, functions, types = [] }: Props)
     });
   }
 
-  function copyToClipboard(text: string) {
-    navigator.clipboard.writeText(text);
-  }
-
   function formatReturnValue(value: string): { formatted: string; raw: string } {
     try {
       const parsed = JSON.parse(value);
@@ -86,17 +83,23 @@ export default function InvokeTool({ contractId, functions, types = [] }: Props)
         funds at risk.
       </p>
       <form onSubmit={handleSubmit} className="space-y-3">
-        <select
-          value={selected}
-          onChange={(e) => handleSelect(e.target.value)}
-          className="w-full bg-prism-bg border border-prism-border rounded-lg px-3 py-2 text-sm font-mono outline-none focus:border-prism-accent"
-        >
+        <div>
+          <label htmlFor="function-select" className="block text-xs font-mono text-prism-muted mb-1">
+            Function
+          </label>
+          <select
+            id="function-select"
+            value={selected}
+            onChange={(e) => handleSelect(e.target.value)}
+            className="w-full bg-prism-bg border border-prism-border rounded-lg px-3 py-2 text-sm font-mono outline-none focus:border-prism-accent"
+          >
           {functions.map((f) => (
             <option key={f.name} value={f.name}>
               {f.name}
             </option>
           ))}
-        </select>
+          </select>
+        </div>
 
         {fn && fn.inputs.length > 0 && (
           <div className="space-y-2">
@@ -134,7 +137,7 @@ export default function InvokeTool({ contractId, functions, types = [] }: Props)
       </form>
 
       {result && (
-        <div className="text-xs font-mono border-t border-prism-border pt-3">
+        <div className="text-xs font-mono border-t border-prism-border pt-3" aria-live="polite">
           {result.success ? (
             <div className="space-y-1">
               <p className="text-prism-green">Simulation succeeded</p>
@@ -142,13 +145,7 @@ export default function InvokeTool({ contractId, functions, types = [] }: Props)
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="text-prism-muted">Return:</span>
-                    <button
-                      onClick={() => copyToClipboard(formatReturnValue(result.returnValue!).raw)}
-                      className="text-prism-accent hover:underline text-xs"
-                      type="button"
-                    >
-                      Copy
-                    </button>
+                    <CopyButton value={formatReturnValue(result.returnValue!).raw} what="return value" />
                   </div>
                   <pre className="break-all whitespace-pre-wrap bg-prism-bg border border-prism-border rounded p-2 text-xs">
                     {formatReturnValue(result.returnValue).formatted}

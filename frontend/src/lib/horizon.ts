@@ -72,6 +72,9 @@ interface HorizonLedger {
   base_fee_in_stroops: number;
   successful_transaction_count: number;
   failed_transaction_count: number;
+  protocol_version: number;
+  max_tx_set_size: number;
+  tx_set_operation_count: number;
 }
 
 interface HorizonTransaction {
@@ -205,6 +208,9 @@ function mapLedger(r: HorizonLedger): LedgerRecord {
     baseFee: r.base_fee_in_stroops,
     successfulTransactionCount: r.successful_transaction_count,
     failedTransactionCount: r.failed_transaction_count,
+    protocolVersion: r.protocol_version,
+    maxTxSetSize: r.max_tx_set_size,
+    txSetOperationCount: r.tx_set_operation_count,
   };
 }
 
