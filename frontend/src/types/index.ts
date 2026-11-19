@@ -20,6 +20,7 @@ export interface TransactionRecord {
   memo?: string;
   envelopeXdr: string;
   resultXdr: string;
+  pagingToken?: string;
 }
 
 export interface AccountBalance {

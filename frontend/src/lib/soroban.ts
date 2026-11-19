@@ -377,6 +377,9 @@ export interface SimulationResult {
   error?: string;
   resourceFeeStroops?: string;
   instructions?: number;
+  needsRestore?: {
+    minResourceFeeStroops: string;
+  };
 }
 
 export async function simulateInvocation(
@@ -402,6 +405,15 @@ export async function simulateInvocation(
     const sim = await server().simulateTransaction(tx);
     if (rpc.Api.isSimulationError(sim)) {
       return { success: false, error: sim.error };
+    }
+    if (rpc.Api.isSimulationRestore(sim)) {
+      return {
+        success: false,
+        error: "Simulation requires restoring archived entries",
+        needsRestore: {
+          minResourceFeeStroops: sim.restorePreamble.minResourceFee,
+        },
+      };
     }
     const resources = sim.transactionData.build().resources();
     return {

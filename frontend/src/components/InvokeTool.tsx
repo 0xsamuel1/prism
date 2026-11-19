@@ -168,7 +168,11 @@ export default function InvokeTool({ contractId, functions, types = [] }: Props)
               )}
             </div>
           ) : (
-            <ErrorReport message={result.error ?? "Simulation failed."} types={types} />
+            <ErrorReport
+              message={result.error ?? "Simulation failed."}
+              types={types}
+              needsRestore={result.needsRestore}
+            />
           )}
         </div>
       )}
@@ -176,7 +180,15 @@ export default function InvokeTool({ contractId, functions, types = [] }: Props)
   );
 }
 
-function ErrorReport({ message, types }: { message: string; types: ContractTypeDef[] }) {
+function ErrorReport({
+  message,
+  types,
+  needsRestore,
+}: {
+  message: string;
+  types: ContractTypeDef[];
+  needsRestore?: { minResourceFeeStroops: string };
+}) {
   const named = describeContractError(message, types);
 
   return (
@@ -187,6 +199,12 @@ function ErrorReport({ message, types }: { message: string; types: ContractTypeD
         </p>
       )}
       <p className="text-prism-red break-all opacity-80">{message}</p>
+      {needsRestore && (
+        <div className="mt-2 p-2 bg-prism-yellow/10 border border-prism-yellow rounded text-prism-yellow">
+          <p className="font-medium">Archived entries must be restored</p>
+          <p className="opacity-80">Restore fee: {needsRestore.minResourceFeeStroops} stroops</p>
+        </div>
+      )}
     </div>
   );
 }

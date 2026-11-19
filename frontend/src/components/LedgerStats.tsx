@@ -1,13 +1,14 @@
 import Link from "next/link";
 import type { LedgerRecord } from "@/types";
-import { formatNumber, timeAgo } from "@/lib/format";
+import { formatNumber } from "@/lib/format";
+import RelativeTime from "@/components/RelativeTime";
 
 interface Props { ledger: LedgerRecord }
 
 export default function LedgerStats({ ledger }: Props) {
   const stats = [
     { label: "Latest Ledger",  value: <Link href={`/ledger/${ledger.sequence}`} className="text-prism-accent hover:underline">#{formatNumber(ledger.sequence)}</Link> },
-    { label: "Closed",         value: timeAgo(ledger.closedAt) },
+    { label: "Closed",         value: <RelativeTime iso={ledger.closedAt} /> },
     { label: "Transactions",   value: formatNumber(ledger.transactionCount) },
     { label: "Base Fee",       value: `${ledger.baseFee} stroops` },
   ];
