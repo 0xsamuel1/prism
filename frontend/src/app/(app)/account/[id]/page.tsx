@@ -1,6 +1,7 @@
-import { getAccount, isNotFound } from "@/lib/horizon";
+import { getAccount, getAccountTransactions, isNotFound } from "@/lib/horizon";
 import CopyButton from "@/components/CopyButton";
-import { balanceLabel, formatNumber } from "@/lib/format";
+import { balanceLabel, formatNumber, shortHash } from "@/lib/format";
+import TransactionCard from "@/components/TransactionCard";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
@@ -29,18 +30,34 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
+interface DetailRowProps {
+  label: string;
+  value: string | React.ReactNode;
+  mono?: boolean;
+}
+
+function DetailRow({ label, value, mono }: DetailRowProps) {
+  return (
+    <div className="flex justify-between items-start">
+      <span className="text-prism-muted text-sm">{label}</span>
+      <span className={`text-sm font-semibold ${mono ? "font-mono text-xs" : ""}`}>{value}</span>
+    </div>
+  );
+}
+
 export default async function AccountPage({ params }: Props) {
   let account;
+  let transactions = [];
+  
   try {
-    account = await getAccount(params.id);
+    [account, { records: transactions }] = await Promise.all([
+      getAccount(params.id),
+      getAccountTransactions(params.id, 20),
+    ]);
   } catch (err) {
-    // Only a real 404 means "no such account". Anything else — Horizon down,
-    // a timeout, a 5xx — is our problem, not the reader's, and saying "not
-    // found" would tell them something false about the chain.
     if (isNotFound(err)) notFound();
     throw err;
   }
-
 
   const flagLabels = [
     account.flags.authRequired && "auth required",
@@ -88,6 +105,17 @@ export default async function AccountPage({ params }: Props) {
           </tbody>
         </table>
       </div>
+
+      <h2 className="text-lg font-semibold mb-3 mt-8">Recent Transactions</h2>
+      {transactions.length === 0 ? (
+        <p className="text-prism-muted text-sm">No transactions found.</p>
+      ) : (
+        <div className="space-y-2">
+          {transactions.map((tx) => (
+            <TransactionCard key={tx.hash} tx={tx} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
