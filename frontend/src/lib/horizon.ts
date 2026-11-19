@@ -89,6 +89,7 @@ interface HorizonTransaction {
   memo?: string | null;
   envelope_xdr: string;
   result_xdr: string;
+  paging_token?: string;
 }
 
 interface HorizonBalance {
@@ -139,6 +140,25 @@ export async function getRecentTransactions(limit = 20): Promise<TransactionReco
 export async function getAccount(id: string): Promise<AccountRecord> {
   const data = await get<HorizonAccount>(`/accounts/${id}`);
   return mapAccount(data);
+}
+
+export async function getAccountTransactions(
+  id: string,
+  limit = 20,
+  cursor?: string
+): Promise<{ records: TransactionRecord[]; nextCursor?: string }> {
+  const params = new URLSearchParams({ order: "desc", limit: String(limit) });
+  if (cursor) params.append("cursor", cursor);
+  const data = await get<HorizonPage<HorizonTransaction>>(
+    `/accounts/${id}/transactions?${params}`
+  );
+
+  const records = data._embedded.records.map(mapTransaction);
+
+  // The cursor for the next page is the paging_token of the last record
+  const nextCursor = records.length > 0 ? records[records.length - 1].pagingToken : undefined;
+
+  return { records, nextCursor };
 }
 
 export interface NetworkPulse {
@@ -234,5 +254,6 @@ function mapTransaction(r: HorizonTransaction): TransactionRecord {
     memo: r.memo ?? undefined,
     envelopeXdr: r.envelope_xdr,
     resultXdr: r.result_xdr,
+    pagingToken: r.paging_token,
   };
 }

@@ -32,6 +32,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
+interface DetailRowProps {
+  label: string;
+  value: string | React.ReactNode;
+  mono?: boolean;
+}
+
+function DetailRow({ label, value, mono }: DetailRowProps) {
+  return (
+    <div className="flex justify-between items-start">
+      <span className="text-prism-muted text-sm">{label}</span>
+      <span className={`text-sm font-semibold ${mono ? "font-mono text-xs" : ""}`}>{value}</span>
+    </div>
+  );
+}
+
 export default async function AccountPage({ params }: Props) {
   let account;
   let deployedContracts;
@@ -41,13 +56,9 @@ export default async function AccountPage({ params }: Props) {
       getIndexedContractsByCreator(params.id),
     ]);
   } catch (err) {
-    // Only a real 404 means "no such account". Anything else — Horizon down,
-    // a timeout, a 5xx — is our problem, not the reader's, and saying "not
-    // found" would tell them something false about the chain.
     if (isNotFound(err)) notFound();
     throw err;
   }
-
 
   const flagLabels = [
     account.flags.authRequired && "auth required",
