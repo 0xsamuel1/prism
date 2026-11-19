@@ -57,7 +57,11 @@ export default function XdrDecoder({ initialInput = "", initialResult = null }: 
   return (
     <div>
       <form onSubmit={handleSubmit}>
+        <label htmlFor="xdr-input" className="block text-xs font-mono text-prism-muted mb-2">
+          XDR Data
+        </label>
         <textarea
+          id="xdr-input"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           spellCheck={false}
@@ -84,7 +88,7 @@ export default function XdrDecoder({ initialInput = "", initialResult = null }: 
       </form>
 
       {result && (
-        <div className="mt-5">
+        <div className="mt-5" aria-live="polite">
           {"error" in result ? (
             <p className="text-prism-red text-sm">{result.error}</p>
           ) : (

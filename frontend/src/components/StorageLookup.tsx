@@ -66,24 +66,36 @@ export default function StorageLookup({ contractId }: Props) {
       </p>
       <form onSubmit={handleSubmit} className="space-y-2">
         <div className="flex flex-wrap gap-2 items-start">
-          <select
-            value={kind}
-            onChange={(e) => handleKindChange(e.target.value as StorageKeyKind)}
-            className="bg-prism-bg border border-prism-border rounded-lg px-2 py-2 text-xs font-mono outline-none focus:border-prism-accent"
-          >
-            <option value="symbol">Symbol</option>
-            <option value="string">String</option>
-            <option value="u32">U32</option>
-            <option value="address">Address</option>
-          </select>
-          <select
-            value={durability}
-            onChange={(e) => setDurability(e.target.value as "persistent" | "temporary")}
-            className="bg-prism-bg border border-prism-border rounded-lg px-2 py-2 text-xs font-mono outline-none focus:border-prism-accent"
-          >
-            <option value="persistent">Persistent</option>
-            <option value="temporary">Temporary</option>
-          </select>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="kind-select" className="text-xs font-mono text-prism-muted">
+              Kind
+            </label>
+            <select
+              id="kind-select"
+              value={kind}
+              onChange={(e) => handleKindChange(e.target.value as StorageKeyKind)}
+              className="bg-prism-bg border border-prism-border rounded-lg px-2 py-2 text-xs font-mono outline-none focus:border-prism-accent"
+            >
+              <option value="symbol">Symbol</option>
+              <option value="string">String</option>
+              <option value="u32">U32</option>
+              <option value="address">Address</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="durability-select" className="text-xs font-mono text-prism-muted">
+              Durability
+            </label>
+            <select
+              id="durability-select"
+              value={durability}
+              onChange={(e) => setDurability(e.target.value as "persistent" | "temporary")}
+              className="bg-prism-bg border border-prism-border rounded-lg px-2 py-2 text-xs font-mono outline-none focus:border-prism-accent"
+            >
+              <option value="persistent">Persistent</option>
+              <option value="temporary">Temporary</option>
+            </select>
+          </div>
           <div className="flex-1 min-w-[160px]">
             <input
               value={key}
@@ -103,7 +115,7 @@ export default function StorageLookup({ contractId }: Props) {
         {validationError && <p className="text-xs text-prism-red">{validationError}</p>}
       </form>
       {result && (
-        <div className="mt-3 text-xs font-mono">
+        <div className="mt-3 text-xs font-mono" aria-live="polite">
           {"error" in result ? (
             <p className="text-prism-red">{result.error}</p>
           ) : (
