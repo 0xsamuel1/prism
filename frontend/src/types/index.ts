@@ -7,6 +7,9 @@ export interface LedgerRecord {
   baseFee: number;
   successfulTransactionCount: number;
   failedTransactionCount: number;
+  protocolVersion: number;
+  maxTxSetSize: number;
+  txSetOperationCount: number;
 }
 
 export interface TransactionRecord {
