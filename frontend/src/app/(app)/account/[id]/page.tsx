@@ -1,6 +1,9 @@
 import { getAccount, isNotFound } from "@/lib/horizon";
+import { getIndexedContractsByCreator } from "@/lib/indexed-db";
 import CopyButton from "@/components/CopyButton";
-import { balanceLabel, formatNumber } from "@/lib/format";
+import DetailRow from "@/components/DetailRow";
+import { balanceLabel, formatNumber, shortHash } from "@/lib/format";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
@@ -31,8 +34,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function AccountPage({ params }: Props) {
   let account;
+  let deployedContracts;
   try {
-    account = await getAccount(params.id);
+    [account, deployedContracts] = await Promise.all([
+      getAccount(params.id),
+      getIndexedContractsByCreator(params.id),
+    ]);
   } catch (err) {
     // Only a real 404 means "no such account". Anything else — Horizon down,
     // a timeout, a 5xx — is our problem, not the reader's, and saying "not
@@ -88,6 +95,34 @@ export default async function AccountPage({ params }: Props) {
           </tbody>
         </table>
       </div>
+
+      {deployedContracts.length > 0 && (
+        <>
+          <h2 className="text-lg font-semibold mb-3 mt-8">Deployed Contracts</h2>
+          <div className="rounded-xl border border-prism-border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-prism-surface border-b border-prism-border">
+                <tr>
+                  <th className="text-left px-4 py-3 text-prism-muted font-medium">Contract ID</th>
+                  <th className="text-right px-4 py-3 text-prism-muted font-medium">Deployment Ledger</th>
+                </tr>
+              </thead>
+              <tbody>
+                {deployedContracts.map((contract) => (
+                  <tr key={contract.contractId} className="border-b border-prism-border last:border-0">
+                    <td className="px-4 py-3 font-mono text-xs">
+                      <Link href={`/contract/${contract.contractId}`} className="text-prism-accent hover:underline">
+                        {contract.contractId}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono text-xs">{formatNumber(contract.deploymentLedger)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   );
 }
