@@ -31,7 +31,7 @@ export default function Error({
       <div className="flex gap-2">
         <button
           onClick={reset}
-          className="bg-prism-accent text-white px-4 py-2 rounded-lg text-xs font-medium hover:opacity-90 transition"
+          className="bg-prism-accent text-prism-on-accent px-4 py-2 rounded-lg text-xs font-medium hover:opacity-90 transition"
         >
           Try again
         </button>
