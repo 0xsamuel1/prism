@@ -1,4 +1,4 @@
-import { Account, Address, BASE_FEE, Contract, Keypair, Networks, TransactionBuilder, rpc, xdr } from "@stellar/stellar-sdk";
+import { Account, Address, BASE_FEE, Contract, Keypair, TransactionBuilder, rpc, xdr } from "@stellar/stellar-sdk";
 import type {
   ContractEvent,
   ContractInfo,
@@ -389,12 +389,7 @@ export async function simulateInvocation(
 ): Promise<SimulationResult> {
 
   try {
-    const passphrases: Record<typeof config.network, string> = {
-      mainnet: Networks.PUBLIC,
-      testnet: Networks.TESTNET,
-      futurenet: Networks.FUTURENET,
-    };
-    const network = passphrases[config.network];
+    const network = config.networkPassphrase;
     const source = new Account(Keypair.random().publicKey(), "0");
     const contract = new Contract(contractId);
     const tx = new TransactionBuilder(source, { fee: BASE_FEE, networkPassphrase: network })
