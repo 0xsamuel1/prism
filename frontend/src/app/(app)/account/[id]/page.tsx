@@ -85,7 +85,48 @@ export default async function AccountPage({ params }: Props) {
           value={`low ${account.thresholds.low} / med ${account.thresholds.med} / high ${account.thresholds.high}`}
         />
         <DetailRow label="Flags" value={flagLabels.length > 0 ? flagLabels.join(", ") : "none"} />
+        {account.homeDomain && <DetailRow label="Home Domain" value={account.homeDomain} />}
+        {account.sponsor && (
+          <DetailRow
+            label="Sponsor"
+            value={
+              <Link href={`/account/${account.sponsor}`} className="text-prism-accent hover:underline break-all">
+                {account.sponsor}
+              </Link>
+            }
+          />
+        )}
+        {account.numSponsoring !== undefined && (
+          <DetailRow label="Sponsoring" value={String(account.numSponsoring)} />
+        )}
+        {account.numSponsored !== undefined && (
+          <DetailRow label="Sponsored By" value={String(account.numSponsored)} />
+        )}
       </div>
+
+      {account.signers && account.signers.length > 0 && (
+        <>
+          <h2 className="text-lg font-semibold mb-3">Signers</h2>
+          <div className="rounded-xl border border-prism-border overflow-hidden mb-8">
+            <table className="w-full text-sm">
+              <thead className="bg-prism-surface border-b border-prism-border">
+                <tr>
+                  <th className="text-left px-4 py-3 text-prism-muted font-medium">Key</th>
+                  <th className="text-right px-4 py-3 text-prism-muted font-medium">Weight</th>
+                </tr>
+              </thead>
+              <tbody>
+                {account.signers.map((signer, i) => (
+                  <tr key={i} className="border-b border-prism-border last:border-0">
+                    <td className="px-4 py-3 font-mono text-xs break-all">{signer.key}</td>
+                    <td className="px-4 py-3 text-right">{signer.weight}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
 
       <h2 className="text-lg font-semibold mb-3">Balances</h2>
       <div className="rounded-xl border border-prism-border overflow-hidden">
@@ -94,13 +135,27 @@ export default async function AccountPage({ params }: Props) {
             <tr>
               <th className="text-left px-4 py-3 text-prism-muted font-medium">Asset</th>
               <th className="text-right px-4 py-3 text-prism-muted font-medium">Balance</th>
+              <th className="text-right px-4 py-3 text-prism-muted font-medium">Limit</th>
+              <th className="text-center px-4 py-3 text-prism-muted font-medium">Authorized</th>
             </tr>
           </thead>
           <tbody>
             {account.balances.map((b, i) => (
               <tr key={i} className="border-b border-prism-border last:border-0">
-                <td className="px-4 py-3 font-mono text-xs">{balanceLabel(b)}</td>
+                <td className="px-4 py-3 font-mono text-xs">
+                  {b.assetIssuer ? (
+                    <Link href={`/account/${b.assetIssuer}`} className="text-prism-accent hover:underline break-all">
+                      {balanceLabel(b)}
+                    </Link>
+                  ) : (
+                    balanceLabel(b)
+                  )}
+                </td>
                 <td className="px-4 py-3 text-right font-mono text-xs">{b.balance}</td>
+                <td className="px-4 py-3 text-right font-mono text-xs">{b.limit ?? "—"}</td>
+                <td className="px-4 py-3 text-center text-xs">
+                  {b.isAuthorized !== undefined ? (b.isAuthorized ? "✓" : "✗") : "—"}
+                </td>
               </tr>
             ))}
           </tbody>
