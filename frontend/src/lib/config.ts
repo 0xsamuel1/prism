@@ -29,6 +29,8 @@ export interface PrismConfig {
   horizonUrl: string;
   sorobanRpcUrl: string;
   siteUrl: string;
+  /** The raw NEXT_PUBLIC_NETWORK value when it was not recognised, otherwise null. */
+  unknownNetwork?: string | null;
 }
 
 /** Coerce a raw NEXT_PUBLIC_NETWORK value to a known network, defaulting to testnet. */
@@ -40,6 +42,19 @@ export function parseNetwork(raw: string | undefined): StellarNetwork {
 }
 
 type EnvLike = Record<string, string | undefined>;
+
+const RECOGNISED_NETWORK_VALUES = ["testnet", "mainnet", "public", "pubnet", "futurenet"];
+
+/**
+ * Returns the trimmed raw value when NEXT_PUBLIC_NETWORK is set to something
+ * parseNetwork does not recognise. Unset or empty is not an error: it means
+ * the default network.
+ */
+export function unrecognisedNetwork(raw: string | undefined): string | null {
+  const value = raw?.trim();
+  if (!value) return null;
+  return RECOGNISED_NETWORK_VALUES.includes(value.toLowerCase()) ? null : value;
+}
 
 /**
  * Build the effective config from an environment.
@@ -56,6 +71,7 @@ export function resolveConfig(env: EnvLike): PrismConfig {
     horizonUrl: (env.NEXT_PUBLIC_HORIZON_URL || defaults.horizon).replace(/\/+$/, ""),
     sorobanRpcUrl: (env.NEXT_PUBLIC_SOROBAN_RPC_URL || defaults.rpc).replace(/\/+$/, ""),
     siteUrl: env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
+    unknownNetwork: unrecognisedNetwork(env.NEXT_PUBLIC_NETWORK),
   };
 }
 
@@ -86,6 +102,11 @@ export function detectNetworkFromUrl(url: string): StellarNetwork | null {
  */
 export function configWarnings(cfg: PrismConfig): string[] {
   const warnings: string[] = [];
+  if (cfg.unknownNetwork) {
+    warnings.push(
+      `NEXT_PUBLIC_NETWORK is set to "${cfg.unknownNetwork}", which is not a known network (testnet, mainnet, futurenet). Prism is using ${cfg.network}.`
+    );
+  }
   const checks: [label: string, url: string][] = [
     ["Horizon", cfg.horizonUrl],
     ["Soroban RPC", cfg.sorobanRpcUrl],
