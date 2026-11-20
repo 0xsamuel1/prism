@@ -78,6 +78,15 @@ const endpoints: Endpoint[] = [
     description: "Ledger detail by sequence number.",
     example: "/api/ledger/4064026",
   },
+  {
+    method: "GET",
+    path: "/api/account/:id",
+    description:
+      "Account detail: sequence, subentry and signer counts, last modified ledger, thresholds, flags, and balances for a Stellar account (G... address).",
+    example: "/api/account/GAAZI4TCR3TY5OJHCTJC2A4QSY6CJWJH5IAJTGKIN2ER7LBNVKOCCWN7",
+    notes:
+      "Returns 400 for a malformed account ID, 404 if the account does not exist, and 502 if Horizon cannot be reached or fails.",
+  },
 ];
 
 export default function DocsPage() {
