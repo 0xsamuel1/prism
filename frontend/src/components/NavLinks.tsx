@@ -21,7 +21,7 @@ export default function NavLinks() {
             key={href}
             href={href}
             aria-current={active ? "page" : undefined}
-            className={active ? "text-white font-medium" : "hover:text-white transition"}
+            className={active ? "text-prism-strong font-medium" : "hover:text-prism-strong transition"}
           >
             {label}
           </Link>
@@ -31,7 +31,7 @@ export default function NavLinks() {
         href="https://github.com/prism-explorer/prism"
         target="_blank"
         rel="noopener noreferrer"
-        className="hover:text-white transition"
+        className="hover:text-prism-strong transition"
       >
         GitHub
       </a>
