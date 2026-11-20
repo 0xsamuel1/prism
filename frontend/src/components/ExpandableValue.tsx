@@ -30,7 +30,7 @@ export default function ExpandableValue({ value, previewLength = 96 }: Props) {
           type="button"
           onClick={() => setExpanded((open) => !open)}
           aria-expanded={expanded}
-          className="shrink-0 text-xs border border-prism-border rounded px-2 py-0.5 text-prism-muted hover:text-white hover:border-prism-accent transition"
+          className="shrink-0 text-xs border border-prism-border rounded px-2 py-0.5 text-prism-muted hover:text-prism-strong hover:border-prism-accent transition"
         >
           {expanded ? "Collapse" : "Expand"}
         </button>
