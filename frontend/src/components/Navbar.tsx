@@ -8,12 +8,14 @@ import { config, type StellarNetwork } from "@/lib/config";
  * load-bearing: it's the only thing on screen that says which chain you're
  * reading. Mainnet is deliberately the calm colour and the test networks the
  * loud ones — seeing test data and believing it's mainnet is the costly
- * mistake, not the reverse.
+ * mistake, not the reverse. The local network is neutral grey: it is neither
+ * mainnet nor a public testnet, so it should not look like either.
  */
 const NETWORK_STYLES: Record<StellarNetwork, string> = {
   mainnet: "bg-prism-green/15 text-prism-green border-prism-green/30",
   testnet: "bg-prism-accent/15 text-prism-accent border-prism-accent/30",
   futurenet: "bg-prism-red/15 text-prism-red border-prism-red/30",
+  local: "bg-prism-muted/15 text-prism-muted border-prism-muted/30",
 };
 
 export default function Navbar() {
