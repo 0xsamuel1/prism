@@ -13,6 +13,7 @@
   --prism-text: 229 231 235;
   --prism-strong: 255 255 255;
   --prism-accent: 79 142 247;
+  --prism-on-accent: 255 255 255;
   --prism-green: 34 197 94;
   --prism-red: 239 68 68;
   --prism-muted: 107 114 128;
@@ -30,6 +31,7 @@
     --prism-text: 15 23 42;
     --prism-strong: 15 23 42;
     --prism-accent: 29 78 216;
+    --prism-on-accent: 255 255 255;
     --prism-green: 22 101 52;
     --prism-red: 185 28 28;
     --prism-muted: 91 101 120;

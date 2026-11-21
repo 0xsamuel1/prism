@@ -33,6 +33,17 @@ export interface AccountBalance {
   /** Set only for liquidity pool shares, which have no asset code. */
   liquidityPoolId?: string;
   balance: string;
+  limit?: string;
+  isAuthorized?: boolean;
+  liabilities?: {
+    buying?: string;
+    selling?: string;
+  };
+}
+
+export interface Signer {
+  key: string;
+  weight: number;
 }
 
 export interface AccountRecord {
@@ -49,6 +60,11 @@ export interface AccountRecord {
   };
   balances: AccountBalance[];
   signerCount: number;
+  signers?: Signer[];
+  homeDomain?: string;
+  sponsor?: string;
+  numSponsoring?: number;
+  numSponsored?: number;
 }
 
 export interface ContractEvent {

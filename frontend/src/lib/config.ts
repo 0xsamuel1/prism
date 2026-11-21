@@ -39,6 +39,8 @@ export interface PrismConfig {
   horizonUrl: string;
   sorobanRpcUrl: string;
   siteUrl: string;
+  /** The raw NEXT_PUBLIC_NETWORK value when it was not recognised, otherwise null. */
+  unknownNetwork?: string | null;
 }
 
 /**
