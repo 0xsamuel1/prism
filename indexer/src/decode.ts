@@ -35,6 +35,8 @@ export function scValToDisplay(val: xdr.ScVal): string {
   }
 }
 
+function scValToXdr(val: xdr.ScVal): string { return val.toXDR("base64"); }
+
 export interface DecodedInvocation {
   contractId: string;
   functionName: string;
@@ -117,6 +119,7 @@ export interface DecodedStorageChange {
   contractId: string;
   durability: "persistent" | "temporary" | "instance";
   keyDisplay: string;
+  keyXdr: string;
   valueDisplay: string | null;
   changeType: "created" | "updated" | "removed" | "state";
 }
@@ -144,6 +147,7 @@ export function extractStorageChanges(meta: xdr.TransactionMeta): DecodedStorage
           contractId: Address.fromScAddress(cd.contract()).toString(),
           durability: cd.durability().name as "persistent" | "temporary",
           keyDisplay: scValToDisplay(cd.key()),
+          keyXdr: scValToXdr(cd.key()),
           valueDisplay: null,
           changeType: "removed",
         });
@@ -177,6 +181,7 @@ export function extractStorageChanges(meta: xdr.TransactionMeta): DecodedStorage
         contractId,
         durability: cd.durability().name as "persistent" | "temporary",
         keyDisplay: scValToDisplay(cd.key()),
+        keyXdr: scValToXdr(cd.key()),
         valueDisplay: scValToDisplay(cd.val()),
         changeType,
       });
@@ -206,6 +211,7 @@ function expandInstanceEntry(
       contractId,
       durability: "instance",
       keyDisplay: "__wasm_hash__",
+      keyXdr: "__wasm_hash__",
       valueDisplay: executable.wasmHash().toString("hex"),
       changeType,
     });
@@ -216,6 +222,7 @@ function expandInstanceEntry(
       contractId,
       durability: "instance",
       keyDisplay: scValToDisplay(entry.key()),
+      keyXdr: scValToXdr(entry.key()),
       valueDisplay: scValToDisplay(entry.val()),
       changeType,
     });
