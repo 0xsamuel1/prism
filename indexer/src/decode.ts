@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { Address, StrKey, xdr, scValToNative } from "@stellar/stellar-sdk";
 
 function toDisplaySafe(value: unknown): unknown {
@@ -119,6 +120,7 @@ export interface DecodedStorageChange {
   keyDisplay: string;
   valueDisplay: string | null;
   changeType: "created" | "updated" | "removed" | "state";
+  keyHash?: string;
 }
 
 /**
@@ -127,6 +129,47 @@ export interface DecodedStorageChange {
  * before this operation) alongside created/updated/removed, giving a full
  * append-only change log rather than just latest-value snapshots.
  */
+/** Hash the XDR LedgerKey exactly as Stellar TTL entries reference it. */
+function contractDataKeyHash(cd: xdr.ContractDataEntry): string {
+  const key = new xdr.LedgerKeyContractData({
+    contract: cd.contract(),
+    key: cd.key(),
+    durability: cd.durability(),
+  });
+  return createHash("sha256").update(xdr.LedgerKey.ledgerKeyContractData(key).toXDR()).digest("hex");
+}
+
+export interface DecodedTtlChange {
+  keyHash: string;
+  liveUntilLedger: number | null;
+}
+
+/** TTL ledger entries carry the hash of their corresponding contract-data key. */
+export function extractTtlChanges(meta: xdr.TransactionMeta): DecodedTtlChange[] {
+  const version = meta.switch();
+  const value = version === 4 ? meta.v4() : version === 3 ? meta.v3() : null;
+  if (!value) return [];
+  const changes: DecodedTtlChange[] = [];
+  for (const operation of value.operations()) {
+    for (const change of operation.changes()) {
+      const kind = change.switch().name;
+      if (kind === "ledgerEntryRemoved") {
+        const key = change.removed();
+        if (key.switch().name === "ttl") {
+          changes.push({ keyHash: Buffer.from(key.ttl().keyHash()).toString("hex"), liveUntilLedger: null });
+        }
+        continue;
+      }
+      const entry = kind === "ledgerEntryCreated" ? change.created()
+        : kind === "ledgerEntryUpdated" ? change.updated() : null;
+      if (!entry || entry.data().switch().name !== "ttl") continue;
+      const ttl = entry.data().ttl();
+      changes.push({ keyHash: Buffer.from(ttl.keyHash()).toString("hex"), liveUntilLedger: ttl.liveUntilLedgerSeq() });
+    }
+  }
+  return changes;
+}
+
 export function extractStorageChanges(meta: xdr.TransactionMeta): DecodedStorageChange[] {
   const switchValue = meta.switch();
   const v = switchValue === 4 ? meta.v4() : switchValue === 3 ? meta.v3() : null;
@@ -169,7 +212,9 @@ export function extractStorageChanges(meta: xdr.TransactionMeta): DecodedStorage
       const contractId = Address.fromScAddress(cd.contract()).toString();
 
       if (isInstanceKey) {
-        out.push(...expandInstanceEntry(contractId, cd.val(), changeType));
+        out.push(...expandInstanceEntry(contractId, cd.val(), changeType).map((row) => ({
+          ...row, keyHash: contractDataKeyHash(cd),
+        })));
         continue;
       }
 
@@ -179,6 +224,7 @@ export function extractStorageChanges(meta: xdr.TransactionMeta): DecodedStorage
         keyDisplay: scValToDisplay(cd.key()),
         valueDisplay: scValToDisplay(cd.val()),
         changeType,
+        keyHash: contractDataKeyHash(cd),
       });
     }
   }
