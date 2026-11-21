@@ -2,8 +2,8 @@
 //! A Soroban contract whose job is to be *looked at*.
 
 use soroban_sdk::{
-    contract, contracterror, contractevent, contractimpl, contracttype, Address, Bytes, Env, Map,
-    String, Symbol, Vec,
+    contract, contracterror, contractevent, contractimpl, contracttype, Address, Bytes, BytesN,
+    Env, Map, String, Symbol, Vec,
 };
 
 const DAY_IN_LEDGERS: u32 = 17_280;
@@ -100,6 +100,16 @@ pub struct AmountsTallied {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct CounterValue {
     pub counter: u32,
+}
+
+/// Emitted by `upgrade`. The new code runs from the next invocation; the
+/// contract's address and storage are unchanged.
+#[contractevent]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Upgraded {
+    #[topic]
+    pub admin: Address,
+    pub new_wasm_hash: BytesN<32>,
 }
 
 #[contract]
@@ -296,6 +306,27 @@ impl Showcase {
 
     pub fn boom() -> Result<(), Error> {
         Err(Error::Deliberate)
+    }
+
+    /// Replace this contract's code with Wasm already uploaded to the network
+    /// (`stellar contract upload`), so Prism's upgrade tracking can be checked
+    /// against a contract we control. Admin only. The address and all storage
+    /// are kept; the new code takes effect from the next invocation.
+    pub fn upgrade(env: Env, new_wasm_hash: BytesN<32>) -> Result<(), Error> {
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .ok_or(Error::NotInitialized)?;
+        admin.require_auth();
+        env.deployer()
+            .update_current_contract_wasm(new_wasm_hash.clone());
+        Upgraded {
+            admin,
+            new_wasm_hash,
+        }
+        .publish(&env);
+        Ok(())
     }
 }
 
