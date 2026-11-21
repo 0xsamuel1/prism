@@ -3,8 +3,10 @@
 use super::*;
 use soroban_sdk::{
     events::Event,
-    testutils::{Address as _, Events, Ledger},
-    vec, Address, Bytes, Env, String, Symbol,
+    testutils::{Address as _, Events, Ledger, MockAuth, MockAuthInvoke},
+    vec,
+    xdr::{ContractExecutable, LedgerEntryData, ScAddress, ScVal},
+    Address, Bytes, BytesN, Env, IntoVal, String, Symbol,
 };
 
 /// Register the contract and return its client plus a funded admin address.
@@ -355,4 +357,141 @@ fn single_value_event_matches_its_declared_type() {
     let expected = CounterValue { counter: 42 }.to_xdr(&env, &client.address);
     let emitted = env.events().all();
     assert_eq!(emitted.events().last(), Some(&expected));
+}
+
+// ── upgrade ─────────────────────────────────────────────────────────────────
+
+/// A minimal Wasm module the host accepts as contract code: a
+/// `contractenvmetav0` section declaring the current protocol (the same
+/// interface-version entry `soroban-sdk` writes into every contract), plus a
+/// marker section so each fixture has its own hash. It exports nothing, so the
+/// tests inspect the upgraded contract's executable instead of calling it.
+fn fixture_wasm(env: &Env, marker: u8) -> Bytes {
+    let protocol = env.ledger().protocol_version().to_be_bytes();
+    let mut wasm = Bytes::from_slice(env, b"\0asm\x01\0\0\0");
+    // Custom section: id 0, 30 bytes, name "contractenvmetav0" (17 bytes),
+    // then ScEnvMetaEntry::InterfaceVersion { protocol, pre_release: 0 } as XDR.
+    wasm.extend_from_slice(&[0x00, 30, 17]);
+    wasm.extend_from_slice(b"contractenvmetav0");
+    wasm.extend_from_slice(&[0, 0, 0, 0]);
+    wasm.extend_from_slice(&protocol);
+    wasm.extend_from_slice(&[0, 0, 0, 0]);
+    // Custom section: id 0, 8 bytes, name "marker" (6 bytes), one marker byte.
+    wasm.extend_from_slice(&[0x00, 8, 6]);
+    wasm.extend_from_slice(b"marker");
+    wasm.push_back(marker);
+    wasm
+}
+
+/// The Wasm hash the ledger records as `contract`'s executable: the value
+/// Prism's indexer reads back as `__wasm_hash__`.
+fn executable_wasm_hash(env: &Env, contract: &Address) -> Option<[u8; 32]> {
+    let target = ScAddress::from(contract);
+    env.to_ledger_snapshot()
+        .ledger_entries
+        .iter()
+        .find_map(|(_, (entry, _))| match &entry.data {
+            LedgerEntryData::ContractData(data)
+                if data.contract == target && data.key == ScVal::LedgerKeyContractInstance =>
+            {
+                match &data.val {
+                    ScVal::ContractInstance(instance) => match &instance.executable {
+                        ContractExecutable::Wasm(hash) => Some(hash.0),
+                        ContractExecutable::StellarAsset => None,
+                    },
+                    _ => None,
+                }
+            }
+            _ => None,
+        })
+}
+
+#[test]
+fn the_admin_can_upgrade_the_contract_wasm() {
+    let env = Env::default();
+    let (client, admin) = setup(&env);
+    let new_wasm_hash = env.deployer().upload_contract_wasm(fixture_wasm(&env, 1));
+    assert_ne!(
+        executable_wasm_hash(&env, &client.address),
+        Some(new_wasm_hash.to_array())
+    );
+
+    client.upgrade(&new_wasm_hash);
+
+    // Exactly one authorization was needed, and it was the admin's.
+    let auths = env.auths();
+    assert_eq!(auths.len(), 1);
+    assert_eq!(auths[0].0, admin);
+
+    let expected = Upgraded {
+        admin,
+        new_wasm_hash: new_wasm_hash.clone(),
+    }
+    .to_xdr(&env, &client.address);
+    assert_eq!(env.events().all().events().last(), Some(&expected));
+
+    // Same address, new executable.
+    assert_eq!(
+        executable_wasm_hash(&env, &client.address),
+        Some(new_wasm_hash.to_array())
+    );
+}
+
+#[test]
+fn an_upgrade_without_any_authorization_is_rejected() {
+    let env = Env::default();
+    let (client, _) = setup(&env);
+    let new_wasm_hash = env.deployer().upload_contract_wasm(fixture_wasm(&env, 2));
+    let before = executable_wasm_hash(&env, &client.address);
+
+    env.mock_auths(&[]);
+    assert!(client.try_upgrade(&new_wasm_hash).is_err());
+    assert_eq!(executable_wasm_hash(&env, &client.address), before);
+}
+
+#[test]
+fn an_upgrade_signed_by_anyone_but_the_admin_is_rejected() {
+    let env = Env::default();
+    let (client, _) = setup(&env);
+    let new_wasm_hash = env.deployer().upload_contract_wasm(fixture_wasm(&env, 3));
+    let before = executable_wasm_hash(&env, &client.address);
+
+    // The stranger signs exactly this call; the contract still demands the admin.
+    let stranger = Address::generate(&env);
+    env.mock_auths(&[MockAuth {
+        address: &stranger,
+        invoke: &MockAuthInvoke {
+            contract: &client.address,
+            fn_name: "upgrade",
+            args: (new_wasm_hash.clone(),).into_val(&env),
+            sub_invokes: &[],
+        },
+    }]);
+    assert!(client.try_upgrade(&new_wasm_hash).is_err());
+    assert_eq!(executable_wasm_hash(&env, &client.address), before);
+}
+
+#[test]
+fn upgrading_to_wasm_that_was_never_uploaded_fails() {
+    let env = Env::default();
+    let (client, _) = setup(&env);
+    let before = executable_wasm_hash(&env, &client.address);
+
+    let unknown = BytesN::from_array(&env, &[7u8; 32]);
+    assert!(client.try_upgrade(&unknown).is_err());
+    assert_eq!(executable_wasm_hash(&env, &client.address), before);
+}
+
+#[test]
+fn upgrade_before_init_reports_not_initialized() {
+    let env = Env::default();
+    env.mock_all_auths();
+    let contract_id = env.register(Showcase, ());
+    let client = ShowcaseClient::new(&env, &contract_id);
+    let new_wasm_hash = env.deployer().upload_contract_wasm(fixture_wasm(&env, 4));
+
+    assert_eq!(
+        client.try_upgrade(&new_wasm_hash),
+        Err(Ok(Error::NotInitialized))
+    );
 }
