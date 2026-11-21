@@ -90,7 +90,10 @@ export async function getIndexedInvocations(
      FROM "Invocation"
      WHERE "contractId" = $1
        AND ($2::int IS NULL OR (ledger, id) < ($2::int, $3::text))
-     ORDER BY ledger DESC, id DESC
+     ORDER BY ledger DESC,
+              split_part("eventId", '-', 3)::int DESC,
+              split_part("eventId", '-', 2)::int DESC,
+              id DESC
      LIMIT $4`,
     [contractId, before?.ledger ?? null, before?.id ?? null, limit + 1]
   );
@@ -203,11 +206,11 @@ export interface IndexedStorageEntry {
 export async function getIndexedStorageEntries(contractId: string): Promise<IndexedStorageEntry[]> {
   if (!isIndexerConfigured()) return [];
   const { rows } = await getPool().query(
-    `SELECT DISTINCT ON (durability, "keyDisplay")
+    `SELECT DISTINCT ON (durability, "keyXdr")
        durability, "keyDisplay", "valueDisplay", ledger, "changeType"
      FROM "StorageChange"
      WHERE "contractId" = $1 AND "changeType" != 'state'
-     ORDER BY durability, "keyDisplay", ledger DESC`,
+     ORDER BY durability, "keyXdr", ledger DESC`,
     [contractId]
   );
   return rows

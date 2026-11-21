@@ -240,6 +240,7 @@ export async function processTransaction(tx: rpc.Api.TransactionInfo, db: Db = p
         contractId: c.contractId,
         durability: c.durability,
         keyDisplay: c.keyDisplay,
+        keyXdr: c.keyXdr,
         valueDisplay: c.valueDisplay,
         changeType: c.changeType,
         ledger: tx.ledger,

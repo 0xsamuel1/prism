@@ -75,13 +75,14 @@ model StorageChange {
   contractId   String
   durability   String // persistent | temporary | instance
   keyDisplay   String // human-readable decoded key ("__instance__" for the contract instance entry)
+  keyXdr       String // canonical base64 XDR identity of the storage key
   valueDisplay String? // human-readable decoded value; null when changeType is "removed"
   changeType   String // created | updated | removed | state
   ledger       Int
   txHash       String
   createdAt    DateTime
 
-  @@unique([txHash, contractId, keyDisplay, durability, changeType])
+  @@unique([txHash, contractId, keyXdr, durability, changeType])
   @@index([contractId, keyDisplay, durability, ledger])
   @@index([contractId, ledger])
 }
