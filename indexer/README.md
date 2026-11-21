@@ -40,6 +40,7 @@ docker compose up
 | -------------------- | ------------------------------------ | ------------------------------------ |
 | `DATABASE_URL`       | *(required)*                         | PostgreSQL connection string         |
 | `SOROBAN_RPC_URL`    | *(required)*                         | Soroban RPC endpoint to poll; no fallback |
+| `STORAGE_HISTORY_RETENTION_LEDGERS` | *(unset — disabled)* | Optional history pruning window; deletes at most 1,000 old rows per poll while preserving the latest record per contract/key/durability |
 | `POLL_INTERVAL_MS`   | `5000`                               | Milliseconds between poll cycles     |
 | `HEALTH_PORT`        | `8080`                               | Port for the `GET /healthz` endpoint |
 | `HEALTH_MAX_LEDGER_LAG` | `60`                              | Ledgers behind the network before `/healthz` returns 503 |
@@ -156,3 +157,20 @@ npm test
 ```
 
 Tests cover the XDR decoder (`decode.test.ts`) — the most correctness-critical component, which turns raw transaction envelopes into typed invocation/storage/event records.
+
+## Storage retention and TTL indexing
+
+Set `STORAGE_HISTORY_RETENTION_LEDGERS` to a positive integer to bound historical
+storage-change growth. After a completed polling page, the indexer deletes up
+to 1,000 rows older than `currentLedger - retention` that have a newer row
+for the same contract, durability and key. The newest observation for each key
+is retained even when it falls outside the window. Leave the setting unset
+to retain all history. Run the Prisma migration before starting the upgraded
+indexer.
+
+Contract-data ledger keys are hashed using SHA-256 of their canonical XDR
+`LedgerKey`. TTL ledger-entry updates are indexed separately by this hash.
+The full-storage endpoint includes `liveUntilLedger` where a matching TTL
+change has been observed; `null` means unknown or removed. Historic entries
+indexed before this migration have no key hash and cannot be retroactively
+joined without reindexing.
