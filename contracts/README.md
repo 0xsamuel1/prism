@@ -10,6 +10,7 @@ formats, varied ABI values, authorization, and a predictable contract error.
 | Crate | What it exercises |
 | --- | --- |
 | [`showcase`](./showcase) | Instance, persistent, and temporary storage; typed map, vec, and single-value events; compound ABI values; and a deliberate error. |
+| [`caller`](./caller) | Nested cross-contract calls into showcase, including forwarded author authorization. |
 
 ### What `showcase` exercises
 
@@ -235,3 +236,13 @@ Expected output (this command intentionally exits non-zero):
 ```text
 error: HostError: Error(Contract, #5)
 ```
+
+## Companion caller contract
+
+The `caller/` crate exposes `bump_showcase(showcase, by)` and
+`write_showcase_note(showcase, author, name, body)`. The second entrypoint
+invokes the showcase's `put_note`, which requires the author's signature;
+this allows Prism to inspect nested authorization trees. Run `cargo test`
+from `contracts/` to exercise both successful nested calls and rejection of
+an unauthorized nested write. The testnet deploy script deploys both contracts,
+invokes the companion, and prints the caller's contract ID.
