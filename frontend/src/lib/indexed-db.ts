@@ -90,7 +90,10 @@ export async function getIndexedInvocations(
      FROM "Invocation"
      WHERE "contractId" = $1
        AND ($2::int IS NULL OR (ledger, id) < ($2::int, $3::text))
-     ORDER BY ledger DESC, id DESC
+     ORDER BY ledger DESC,
+              split_part("eventId", '-', 3)::int DESC,
+              split_part("eventId", '-', 2)::int DESC,
+              id DESC
      LIMIT $4`,
     [contractId, before?.ledger ?? null, before?.id ?? null, limit + 1]
   );
