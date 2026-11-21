@@ -76,6 +76,7 @@ model StorageChange {
   durability   String // persistent | temporary | instance
   keyDisplay   String // human-readable decoded key ("__instance__" for the contract instance entry)
   valueDisplay String? // human-readable decoded value; null when changeType is "removed"
+  keyHash      String? // SHA-256 of the XDR LedgerKey, used to join TTL records
   changeType   String // created | updated | removed | state
   ledger       Int
   txHash       String
@@ -84,6 +85,18 @@ model StorageChange {
   @@unique([txHash, contractId, keyDisplay, durability, changeType])
   @@index([contractId, keyDisplay, durability, ledger])
   @@index([contractId, ledger])
+  @@index([keyHash])
+}
+
+model TtlChange {
+  id              String   @id @default(cuid())
+  keyHash         String
+  liveUntilLedger Int?
+  ledger          Int
+  txHash          String
+
+  @@unique([txHash, keyHash])
+  @@index([keyHash, ledger])
 }
 
 model ContractEventRecord {
