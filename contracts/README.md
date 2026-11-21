@@ -3,7 +3,8 @@
 Soroban contracts that give the explorer something real to inspect.
 
 `showcase/` deliberately uses every storage durability, all three event data
-formats, varied ABI values, authorization, and a predictable contract error.
+formats, varied ABI values, authorization, a predictable contract error, and an
+admin-only upgrade.
 
 ## Contracts
 
@@ -18,11 +19,16 @@ formats, varied ABI values, authorization, and a predictable contract error.
 - **Persistent storage** — keyed notes plus standalone `Vec<i128>` and
   `Map<Symbol, String>` entries.
 - **Temporary storage** — per-address session markers that expire on their own.
-- **Events** — seven typed events. Most use map data, `AmountsTallied` uses vec
+- **Events** — eight typed events. Most use map data, `AmountsTallied` uses vec
   data, and `CounterValue` uses single-value data.
 - **ABI surface** — `u32`, `i128`, `Symbol`, `String`, `Address`, `Bytes`,
-  `Vec<T>`, `Map<K, V>`, `Option<T>`, struct returns, and a contract enum.
+  `BytesN<32>`, `Vec<T>`, `Map<K, V>`, `Option<T>`, struct returns, and a
+  contract enum.
 - **Failure** — `boom()` always returns `Error::Deliberate`.
+- **Upgrades** — `upgrade(new_wasm_hash)` swaps the contract's code for Wasm
+  already uploaded to the network, keeping its address and storage. Only the
+  admin can call it. This gives the indexer's `__wasm_hash__` upgrade tracking
+  a contract we control (see [Upgrade recipe](#upgrade-recipe)).
 
 ## Local development
 
@@ -46,8 +52,8 @@ cargo test
 Example output:
 
 ```text
-running 23 tests
-test result: ok. 23 passed; 0 failed; 0 ignored
+running 28 tests
+test result: ok. 28 passed; 0 failed; 0 ignored
 ```
 
 ```bash

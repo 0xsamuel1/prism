@@ -242,6 +242,7 @@ export async function processTransaction(tx: rpc.Api.TransactionInfo, db: Db = p
         contractId: c.contractId,
         durability: c.durability,
         keyDisplay: c.keyDisplay,
+        keyXdr: c.keyXdr,
         valueDisplay: c.valueDisplay,
         keyHash: c.keyHash,
         changeType: c.changeType,
