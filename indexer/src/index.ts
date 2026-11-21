@@ -376,10 +376,10 @@ export async function pruneStorageHistory(
 ): Promise<number> {
   const cutoff = Math.max(0, currentLedger - retentionLedgers);
   if (cutoff === 0) return 0;
-  return db.$executeRaw\`
+  return db.$executeRaw`
     WITH candidates AS (
       SELECT older.id FROM "StorageChange" older
-      WHERE older.ledger < \${cutoff}
+      WHERE older.ledger < ${cutoff}
         AND EXISTS (
           SELECT 1 FROM "StorageChange" newer
           WHERE newer."contractId" = older."contractId"
@@ -392,7 +392,7 @@ export async function pruneStorageHistory(
       LIMIT 1000
     )
     DELETE FROM "StorageChange" WHERE id IN (SELECT id FROM candidates)
-  \`;
+  `;
 }
 
 async function main(): Promise<void> {
