@@ -73,7 +73,7 @@ export default function XdrDecoder({ initialInput = "", initialResult = null }: 
           <button
             type="submit"
             disabled={pending}
-            className="bg-prism-accent text-white px-4 py-2 rounded-lg text-xs font-medium hover:opacity-90 transition disabled:opacity-50"
+            className="bg-prism-accent text-prism-on-accent px-4 py-2 rounded-lg text-xs font-medium hover:opacity-90 transition disabled:opacity-50"
           >
             {pending ? "Decoding…" : "Decode"}
           </button>

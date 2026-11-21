@@ -19,6 +19,7 @@ const config: Config = {
           green: "rgb(var(--prism-green) / <alpha-value>)",
           red: "rgb(var(--prism-red) / <alpha-value>)",
           muted: "rgb(var(--prism-muted) / <alpha-value>)",
+          "on-accent": "rgb(var(--prism-on-accent) / <alpha-value>)",
         },
       },
       fontFamily: {

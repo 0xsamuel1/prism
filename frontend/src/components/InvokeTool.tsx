@@ -130,7 +130,7 @@ export default function InvokeTool({ contractId, functions, types = [] }: Props)
         <button
           type="submit"
           disabled={pending || !fn || hasJsonErrors}
-          className="bg-prism-accent text-white px-4 py-2 rounded-lg text-xs font-medium hover:opacity-90 transition disabled:opacity-50"
+          className="bg-prism-accent text-prism-on-accent px-4 py-2 rounded-lg text-xs font-medium hover:opacity-90 transition disabled:opacity-50"
         >
           {pending ? "Simulating…" : "Simulate call"}
         </button>
