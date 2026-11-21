@@ -130,7 +130,7 @@ export interface DecodedStorageChange {
  * append-only change log rather than just latest-value snapshots.
  */
 /** Hash the XDR LedgerKey exactly as Stellar TTL entries reference it. */
-function contractDataKeyHash(cd: xdr.ContractDataEntry): string {
+function contractDataKeyHash(cd: { contract(): xdr.ScAddress; key(): xdr.ScVal; durability(): xdr.ContractDataDurability }): string {
   const key = new xdr.LedgerKeyContractData({
     contract: cd.contract(),
     key: cd.key(),
@@ -189,6 +189,7 @@ export function extractStorageChanges(meta: xdr.TransactionMeta): DecodedStorage
           keyDisplay: scValToDisplay(cd.key()),
           valueDisplay: null,
           changeType: "removed",
+          keyHash: contractDataKeyHash(cd),
         });
         continue;
       }
