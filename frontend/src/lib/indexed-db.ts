@@ -206,11 +206,11 @@ export interface IndexedStorageEntry {
 export async function getIndexedStorageEntries(contractId: string): Promise<IndexedStorageEntry[]> {
   if (!isIndexerConfigured()) return [];
   const { rows } = await getPool().query(
-    `SELECT DISTINCT ON (durability, "keyDisplay")
+    `SELECT DISTINCT ON (durability, "keyXdr")
        durability, "keyDisplay", "valueDisplay", ledger, "changeType"
      FROM "StorageChange"
      WHERE "contractId" = $1 AND "changeType" != 'state'
-     ORDER BY durability, "keyDisplay", ledger DESC`,
+     ORDER BY durability, "keyXdr", ledger DESC`,
     [contractId]
   );
   return rows
