@@ -9,6 +9,7 @@ import {
   extractEvents,
   extractInvocationReturnValue,
   extractStorageChanges,
+  extractTtlChanges,
 } from "./decode.js";
 
 // ---------------------------------------------------------------------------
@@ -243,6 +244,7 @@ export async function processTransaction(tx: rpc.Api.TransactionInfo, db: Db = p
         durability: c.durability,
         keyDisplay: c.keyDisplay,
         valueDisplay: c.valueDisplay,
+        keyHash: c.keyHash,
         changeType: c.changeType,
         ledger: tx.ledger,
         txHash: tx.txHash,
@@ -250,6 +252,19 @@ export async function processTransaction(tx: rpc.Api.TransactionInfo, db: Db = p
       })),
     });
     metricRowsWritten.inc({ table: "storageChange" }, storageResult.count);
+  }
+
+  const ttlChanges = extractTtlChanges(tx.resultMetaXdr);
+  if (ttlChanges.length > 0) {
+    const ttlResult = await db.ttlChange.createMany({
+      skipDuplicates: true,
+      data: ttlChanges.map((change) => ({
+        ...change,
+        ledger: tx.ledger,
+        txHash: tx.txHash,
+      })),
+    });
+    metricRowsWritten.inc({ table: "ttlChange" }, ttlResult.count);
   }
 
   const events = extractEvents(tx.resultMetaXdr, tx.txHash);
