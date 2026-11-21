@@ -38,6 +38,8 @@ function requirePositiveInt(name: string, fallback: number): number {
 
 const RPC_URL = requireEnv("SOROBAN_RPC_URL");
 const POLL_INTERVAL_MS = requirePositiveInt("POLL_INTERVAL_MS", 5000);
+const STORAGE_HISTORY_RETENTION_LEDGERS = process.env.STORAGE_HISTORY_RETENTION_LEDGERS === undefined
+  ? null : requirePositiveInt("STORAGE_HISTORY_RETENTION_LEDGERS", 1);
 const HEALTH_PORT = requirePositiveInt("HEALTH_PORT", 8080);
 const MAX_LEDGER_LAG = requirePositiveInt("HEALTH_MAX_LEDGER_LAG", 60);
 const BACKOFF_BASE_MS = 1_000;
@@ -366,6 +368,33 @@ export async function commitPage(
   );
 }
 
+/** Delete bounded batches of old history, never the latest observation of any key. */
+export async function pruneStorageHistory(
+  currentLedger: number,
+  retentionLedgers: number,
+  db: Pick<typeof prisma, "$executeRaw"> = prisma
+): Promise<number> {
+  const cutoff = Math.max(0, currentLedger - retentionLedgers);
+  if (cutoff === 0) return 0;
+  return db.$executeRaw\`
+    WITH candidates AS (
+      SELECT older.id FROM "StorageChange" older
+      WHERE older.ledger < \${cutoff}
+        AND EXISTS (
+          SELECT 1 FROM "StorageChange" newer
+          WHERE newer."contractId" = older."contractId"
+            AND newer."durability" = older."durability"
+            AND newer."keyDisplay" = older."keyDisplay"
+            AND (newer.ledger > older.ledger OR
+              (newer.ledger = older.ledger AND newer.id > older.id))
+        )
+      ORDER BY older.ledger, older.id
+      LIMIT 1000
+    )
+    DELETE FROM "StorageChange" WHERE id IN (SELECT id FROM candidates)
+  \`;
+}
+
 async function main(): Promise<void> {
   const network = await server.getHealth();
   const existing = await findCursor();
@@ -413,6 +442,10 @@ async function main(): Promise<void> {
         if (page.transactions.length > 0) {
           metricLedgersProcessed.inc();
         }
+      }
+      if (STORAGE_HISTORY_RETENTION_LEDGERS !== null && !paginationCursor) {
+        const pruned = await pruneStorageHistory(cursor, STORAGE_HISTORY_RETENTION_LEDGERS);
+        if (pruned > 0) console.log(`[indexer] pruned ${pruned} old storage history rows`);
       }
       consecutiveFailures = 0;
       health.lastPollFailed = false;
