@@ -37,7 +37,6 @@ function requirePositiveInt(name: string, fallback: number): number {
   return n;
 }
 
-const RPC_URL = requireEnv("SOROBAN_RPC_URL");
 const POLL_INTERVAL_MS = requirePositiveInt("POLL_INTERVAL_MS", 5000);
 const STORAGE_HISTORY_RETENTION_LEDGERS = process.env.STORAGE_HISTORY_RETENTION_LEDGERS === undefined
   ? null : requirePositiveInt("STORAGE_HISTORY_RETENTION_LEDGERS", 1);
@@ -78,7 +77,7 @@ export const metricPollErrors = new Counter({
   registers: [metricsRegistry],
 });
 
-export const server = new rpc.Server(RPC_URL, { timeout: 10_000 });
+let server: rpc.Server;
 
 let stopping = false;
 let wakeFromSleep = (): void => {};
@@ -411,6 +410,8 @@ export async function pruneStorageHistory(
 }
 
 async function main(): Promise<void> {
+  // Validate only at process startup; unit tests import this module without RPC.
+  server = new rpc.Server(requireEnv("SOROBAN_RPC_URL"), { timeout: 10_000 });
   const network = await server.getHealth();
   const existing = await findCursor();
   if (existing && process.env.INDEXER_START_LEDGER) {
