@@ -83,6 +83,25 @@ cp .env.example .env.local
 npm run dev
 ```
 
+### Local network (quickstart)
+
+To point Prism at a private network such as [`stellar/quickstart`](https://github.com/stellar/quickstart), start the container:
+
+```bash
+docker run --rm -it -p 8000:8000 --name stellar stellar/quickstart --local --enable rpc
+```
+
+Then set these in `frontend/.env.local` and run `npm run dev`. A `local` network has no public defaults, so all four are required and Prism refuses to start if the passphrase or an endpoint is missing:
+
+```bash
+NEXT_PUBLIC_NETWORK=local
+NEXT_PUBLIC_NETWORK_PASSPHRASE="Standalone Network ; February 2017"
+NEXT_PUBLIC_HORIZON_URL=http://localhost:8000
+NEXT_PUBLIC_SOROBAN_RPC_URL=http://localhost:8000/soroban/rpc
+```
+
+The navbar badge reads `local`. Prism also asks the RPC node for its network passphrase and shows a banner if it differs from `NEXT_PUBLIC_NETWORK_PASSPHRASE`. Check the quickstart documentation for current flags and endpoint paths, since they change between releases.
+
 Full stack, including the indexer for full storage enumeration and unbounded history:
 
 ```bash
