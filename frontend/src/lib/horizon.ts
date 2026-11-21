@@ -98,6 +98,19 @@ interface HorizonBalance {
   asset_issuer?: string;
   liquidity_pool_id?: string;
   balance: string;
+  limit?: string;
+  is_authorized?: boolean;
+  is_authorized_to_maintain_liabilities?: boolean;
+  liabilities?: {
+    buying?: string;
+    selling?: string;
+  };
+}
+
+interface HorizonSigner {
+  key: string;
+  weight: number;
+  type: string;
 }
 
 interface HorizonAccount {
@@ -114,7 +127,11 @@ interface HorizonAccount {
     auth_clawback_enabled: boolean;
   };
   balances: HorizonBalance[];
-  signers?: unknown[];
+  signers?: HorizonSigner[];
+  home_domain?: string;
+  sponsor?: string;
+  num_sponsoring?: number;
+  num_sponsored?: number;
 }
 
 export async function getLatestLedger(): Promise<LedgerRecord> {
@@ -161,6 +178,27 @@ export async function getAccountTransactions(
   return { records, nextCursor };
 }
 
+/**
+ * Fetch all transactions in a ledger. Issue #279.
+ */
+export async function getLedgerTransactions(
+  sequence: number,
+  limit = 20,
+  cursor?: string
+): Promise<{ records: TransactionRecord[]; nextCursor?: string }> {
+  const params = new URLSearchParams({ order: "desc", limit: String(limit) });
+  if (cursor) params.append("cursor", cursor);
+  const data = await get<HorizonPage<HorizonTransaction>>(
+    `/ledgers/${sequence}/transactions?${params}`,
+    REVALIDATE_FINALIZED
+  );
+
+  const records = data._embedded.records.map(mapTransaction);
+  const nextCursor = records.length > 0 ? records[records.length - 1].pagingToken : undefined;
+
+  return { records, nextCursor };
+}
+
 export interface NetworkPulse {
   sequence: number;
   transactionsPerSecond: number;
@@ -170,20 +208,37 @@ export interface NetworkPulse {
 }
 
 /**
- * A snapshot of network activity derived from the two most recent ledgers.
- * transactionsPerSecond/closeTimeSeconds are single-sample estimates (real
- * numbers, not fabricated) — expect them to be noisy ledger-to-ledger.
+ * A snapshot of network activity derived from the 10 most recent ledgers.
+ * Transactions per second and close time are averaged over the sample window
+ * to smooth out ledger-to-ledger noise. Issue #284.
  */
 export async function getNetworkPulse(): Promise<NetworkPulse> {
-  const data = await get<HorizonPage<HorizonLedger>>("/ledgers?order=desc&limit=2");
-  const [latest, prev] = data._embedded.records;
-  const closeTimeSeconds =
-    (new Date(latest.closed_at).getTime() - new Date(prev.closed_at).getTime()) / 1000;
-  const txCount = latest.successful_transaction_count + latest.failed_transaction_count;
+  const data = await get<HorizonPage<HorizonLedger>>("/ledgers?order=desc&limit=10");
+  const records = data._embedded.records;
+  const latest = records[0];
+
+  // Average close times and transaction counts across all 10 ledgers
+  let totalCloseTime = 0;
+  let totalTransactions = 0;
+
+  for (let i = 0; i < records.length - 1; i++) {
+    const current = records[i];
+    const prev = records[i + 1];
+    const closeTime =
+      (new Date(current.closed_at).getTime() - new Date(prev.closed_at).getTime()) / 1000;
+    const txCount = current.successful_transaction_count + current.failed_transaction_count;
+
+    totalCloseTime += closeTime;
+    totalTransactions += txCount;
+  }
+
+  const avgCloseTime = totalCloseTime / (records.length - 1);
+  const avgTransactionsPerSecond = avgCloseTime > 0 ? totalTransactions / totalCloseTime : 0;
+
   return {
     sequence: latest.sequence,
-    transactionsPerSecond: closeTimeSeconds > 0 ? txCount / closeTimeSeconds : 0,
-    closeTimeSeconds,
+    transactionsPerSecond: avgTransactionsPerSecond,
+    closeTimeSeconds: avgCloseTime,
     operationCount: latest.operation_count,
     baseFee: latest.base_fee_in_stroops,
   };
@@ -237,8 +292,16 @@ function mapAccount(r: HorizonAccount): AccountRecord {
       assetIssuer: b.asset_issuer,
       liquidityPoolId: b.liquidity_pool_id,
       balance: b.balance,
+      limit: b.limit,
+      isAuthorized: b.is_authorized,
+      liabilities: b.liabilities,
     })),
     signerCount: r.signers?.length ?? 0,
+    signers: r.signers?.map((s) => ({ key: s.key, weight: s.weight })),
+    homeDomain: r.home_domain,
+    sponsor: r.sponsor,
+    numSponsoring: r.num_sponsoring,
+    numSponsored: r.num_sponsored,
   };
 }
 

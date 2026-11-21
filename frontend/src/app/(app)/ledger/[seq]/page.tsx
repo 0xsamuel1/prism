@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { getLatestLedger, getLedger, isNotFound } from "@/lib/horizon";
+import { getLatestLedger, getLedger, getLedgerTransactions, isNotFound } from "@/lib/horizon";
 import { formatDate, formatNumber } from "@/lib/format";
 import { notFound } from "next/navigation";
 import DetailRow from "@/components/DetailRow";
+import TransactionCard from "@/components/TransactionCard";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +39,15 @@ export default async function LedgerPage({ params }: Props) {
   } catch (err) {
     if (isNotFound(err)) notFound();
     throw err;
+  }
+
+  // Fetch transactions for this ledger. Issue #279.
+  let transactions = [];
+  try {
+    const txResult = await getLedgerTransactions(seq, 100);
+    transactions = txResult.records;
+  } catch {
+    // Silently fail if transactions can't be fetched
   }
 
   // Without a latest ledger we can't tell whether this one is the newest, so
@@ -80,6 +90,17 @@ export default async function LedgerPage({ params }: Props) {
         <DetailRow label="Operations"          value={formatNumber(ledger.operationCount)} />
         <DetailRow label="Base Fee"            value={`${ledger.baseFee} stroops`} />
       </div>
+
+      {transactions.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-xl font-bold mb-4">Transactions ({transactions.length})</h2>
+          <div className="space-y-3">
+            {transactions.map((tx) => (
+              <TransactionCard key={tx.hash} tx={tx} />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
